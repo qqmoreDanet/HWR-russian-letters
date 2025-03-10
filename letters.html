@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Создание датасета рукописных русских букв</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1, h2, h3 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .drawing-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .canvas-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        canvas {
+            border: 2px solid #333;
+            border-radius: 5px;
+            background-color: white;
+            cursor: crosshair;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #3367d6;
+        }
+        .letter-input {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .letter-input label {
+            font-weight: bold;
+        }
+        .letter-input select, .letter-input input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .letter-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        .letter-card img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            border: 1px solid #eee;
+            background-color: white;
+        }
+        .letter-card p {
+            margin: 5px 0 0;
+            font-weight: bold;
+        }
+        .letter-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .letter-case {
+            margin-left: 15px;
+        }
+        #exportButton {
+            background-color: #34a853;
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            align-self: center;
+        }
+        .info-text {
+            background-color: #e8f0fe;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4285f4;
+        }
+        .export-options {
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+        .option-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .option-group label {
+            margin-right: 15px;
+            min-width: 160px;
+        }
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .preview-container img {
+            width: 60px;
+            height: 60px;
+            border: 1px solid #eee;
+        }
+        .checkbox-option {
+            margin-right: 20px;
+        }
+        .augmentation-result {
+            margin-top: 20px;
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .augmentation-result h3 {
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Создание датасета рукописных русских букв</h1>
+    
+    <div class="container">
+        <div class="drawing-area">
+            <div class="info-text">
+                Нарисуйте русскую букву, выберите её из списка или введите вручную, затем нажмите "Сохранить букву".
+                После сохранения автоматически будет создано 10 вариантов с различными изменениями (аугментацией).
+            </div>
+            
+            <div class="letter-input">
+                <label for="letterSelect">Буква:</label>
+                <select id="letterSelect">
+                    <option value="" selected disabled>Выберите букву</option>
+                    <option value="А">А</option>
+                    <option value="Б">Б</option>
+                    <option value="В">В</option>
+                    <option value="Г">Г</option>
+                    <option value="Д">Д</option>
+                    <option value="Е">Е</option>
+                    <option value="Ё">Ё</option>
+                    <option value="Ж">Ж</option>
+                    <option value="З">З</option>
+                    <option value="И">И</option>
+                    <option value="Й">Й</option>
+                    <option value="К">К</option>
+                    <option value="Л">Л</option>
+                    <option value="М">М</option>
+                    <option value="Н">Н</option>
+                    <option value="О">О</option>
+                    <option value="П">П</option>
+                    <option value="Р">Р</option>
+                    <option value="С">С</option>
+                    <option value="Т">Т</option>
+                    <option value="У">У</option>
+                    <option value="Ф">Ф</option>
+                    <option value="Х">Х</option>
+                    <option value="Ц">Ц</option>
+                    <option value="Ч">Ч</option>
+                    <option value="Ш">Ш</option>
+                    <option value="Щ">Щ</option>
+                    <option value="Ъ">Ъ</option>
+                    <option value="Ы">Ы</option>
+                    <option value="Ь">Ь</option>
+                    <option value="Э">Э</option>
+                    <option value="Ю">Ю</option>
+                    <option value="Я">Я</option>
+                </select>
+                
+                <input type="text" id="letterInput" placeholder="Или введите вручную" maxlength="1">
+                
+                <div class="letter-case">
+                    <input type="radio" id="uppercase" name="letterCase" value="uppercase" checked>
+                    <label for="uppercase">Заглавная</label>
+                    <input type="radio" id="lowercase" name="letterCase" value="lowercase">
+                    <label for="lowercase">Строчная</label>
+                </div>
+            </div>
+            
+            <div class="canvas-container">
+                <canvas id="drawingCanvas" width="280" height="280"></canvas>
+            </div>
+            
+            <div class="controls">
+                <button id="clearButton">Очистить</button>
+                <button id="saveButton">Сохранить букву</button>
+                <button id="undoButton">Отменить последнюю линию</button>
+            </div>
+        </div>
+
+        <div id="augmentationResult" class="augmentation-result" style="display: none;">
+            <h3>Результаты аугментации</h3>
+            <div class="info-text">
+                Созданные варианты буквы с аугментацией:
+            </div>
+            <div id="augmentationPreview" class="preview-container"></div>
+        </div>
+
+        <h2>Сохраненные буквы</h2>
+        <div class="gallery" id="letterGallery"></div>
+        
+        <div class="export-options">
+            <h3>Настройки экспорта</h3>
+            
+            <div class="option-group">
+                <label>Формат изображений:</label>
+                <div>
+                    <input type="radio" id="pngFormat" name="imageFormat" value="png" checked>
+                    <label for="pngFormat" class="checkbox-option">PNG</label>
+                    <input type="radio" id="jpgFormat" name="imageFormat" value="jpg">
+                    <label for="jpgFormat" class="checkbox-option">JPG</label>
+                </div>
+            </div>
+            
+            <p class="info-text">
+                При экспорте датасета изображения будут организованы в папки по регистру букв и самим буквам.
+                Для каждой нарисованной буквы будут включены все варианты с аугментацией.
+            </p>
+            
+            <button id="exportButton">Экспортировать датасет</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('drawingCanvas');
+            const ctx = canvas.getContext('2d');
+            const gallery = document.getElementById('letterGallery');
+            const letterSelect = document.getElementById('letterSelect');
+            const letterInput = document.getElementById('letterInput');
+            const clearButton = document.getElementById('clearButton');
+            const saveButton = document.getElementById('saveButton');
+            const undoButton = document.getElementById('undoButton');
+            const exportButton = document.getElementById('exportButton');
+            const previewContainer = document.getElementById('augmentationPreview');
+            const augmentationResult = document.getElementById('augmentationResult');
+            
+            // Радио-кнопки
+            const uppercaseRadio = document.getElementById('uppercase');
+            const lowercaseRadio = document.getElementById('lowercase');
+            const pngFormatRadio = document.getElementById('pngFormat');
+            
+            // Настройка кисти
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            let isDrawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            let pathHistory = [];
+            let currentPath = [];
+            let dataset = [];
+            
+            // Константы для аугментации
+            const AUGMENTATION_COUNT = 10; // Увеличение количества аугментированных изображений до 10
+            const ROTATION_RANGE = 15;     // градусы
+            const SHIFT_RANGE = 15;        // пиксели
+            const SCALE_RANGE = 15;        // проценты
+            const NOISE_AMOUNT = 8;        // проценты
+            const BLUR_AMOUNT = 0.8;       // сила размытия
+            const CONTRAST_RANGE = 20;     // проценты изменения контраста
+            const BRIGHTNESS_RANGE = 15;   // проценты изменения яркости
+            
+            // Функция для очистки холста
+            function clearCanvas() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                currentPath = [];
+            }
+            
+            // Обработчики событий рисования
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('touchstart', handleTouchStart);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('touchmove', handleTouchMove);
+            canvas.addEventListener('mouseup', endDrawing);
+            canvas.addEventListener('touchend', endDrawing);
+            canvas.addEventListener('mouseout', endDrawing);
+            
+            function startDrawing(e) {
+                isDrawing = true;
+                const rect = canvas.getBoundingClientRect();
+                [lastX, lastY] = [
+                    e.clientX - rect.left,
+                    e.clientY - rect.top
+                ];
+                currentPath = [];
+                currentPath.push({ x: lastX, y: lastY });
+            }
+            
+            function handleTouchStart(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                startDrawing(mouseEvent);
+            }
+            
+            function draw(e) {
+                if (!isDrawing) return;
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                
+                currentPath.push({ x, y });
+                [lastX, lastY] = [x, y];
+            }
+            
+            function handleTouchMove(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                draw(mouseEvent);
+            }
+            
+            function endDrawing() {
+                if (isDrawing) {
+                    isDrawing = false;
+                    if (currentPath.length > 0) {
+                        pathHistory.push([...currentPath]);
+                    }
+                }
+            }
+            
+            // Отменить последнюю линию
+            undoButton.addEventListener('click', function() {
+                if (pathHistory.length > 0) {
+                    pathHistory.pop();
+                    redrawCanvas();
+                }
+            });
+            
+            function redrawCanvas() {
+                clearCanvas();
+                for (const path of pathHistory) {
+                    if (path.length < 2) continue;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(path[0].x, path[0].y);
+                    
+                    for (let i = 1; i < path.length; i++) {
+                        ctx.lineTo(path[i].x, path[i].y);
+                    }
+                    
+                    ctx.stroke();
+                }
+            }
+            
+            // Очистить холст
+            clearButton.addEventListener('click', function() {
+                clearCanvas();
+                pathHistory = [];
+                // Скрываем результаты аугментации при очистке холста
+                augmentationResult.style.display = 'none';
+            });
+            
+            // Синхронизация выбора буквы
+            letterSelect.addEventListener('change', function() {
+                if (letterSelect.value) {
+                    letterInput.value = letterSelect.value;
+                }
+            });
+            
+            letterInput.addEventListener('input', function() {
+                const russianLetterRegex = /^[а-яА-ЯёЁ]$/;
+                if (letterInput.value && russianLetterRegex.test(letterInput.value)) {
+                    letterSelect.value = '';
+                }
+            });
+            
+            // Генерация уникального идентификатора
+            function generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substring(2);
+            }
+            
+            // Функции аугментации изображений
+            function createAugmentedVersions(baseImageData) {
+                const augmentedImages = [];
+    
+                // Создаем временный canvas для манипуляций
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+    
+                // Загружаем базовое изображение
+                const img = new Image();
+                img.src = baseImageData;
+    
+                // Создаем аугментированные версии
+                return new Promise((resolve) => {
+                    img.onload = function() {
+                        for (let i = 0; i < AUGMENTATION_COUNT; i++) {
+                            tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                            
+                            // Находим центр canvas
+                            const centerX = tempCanvas.width / 2;
+                            const centerY = tempCanvas.height / 2;
+                            
+                            // Применяем трансформации
+                            tempCtx.save();
+                            tempCtx.translate(centerX, centerY);
+                            
+                            // Случайный выбор применяемых методов аугментации
+                            const useRotation = Math.random() > 0.3;      // 70% вероятность
+                            const useScale = Math.random() > 0.3;         // 70% вероятность
+                            const useShift = Math.random() > 0.3;         // 70% вероятность
+                            const useNoise = Math.random() > 0.5;         // 50% вероятность
+                            const useBlur = Math.random() > 0.7;          // 30% вероятность
+                            const useContrast = Math.random() > 0.6;      // 40% вероятность
+                            const useBrightness = Math.random() > 0.6;    // 40% вероятность
+                            
+                            // Поворот
+                            if (useRotation) {
+                                const rotation = (Math.random() * 2 - 1) * ROTATION_RANGE * Math.PI / 180;
+                                tempCtx.rotate(rotation);
+                            }
+                            
+                            // Масштаб
+                            if (useScale) {
+                                const scaleFactorX = 1 + (Math.random() * 2 - 1) * SCALE_RANGE / 100;
+                                const scaleFactorY = 1 + (Math.random() * 2 - 1) * SCALE_RANGE / 100;
+                                tempCtx.scale(scaleFactorX, scaleFactorY);
+                            }
+                            
+                            // Сдвиг
+                            const shiftX = useShift ? (Math.random() * 2 - 1) * SHIFT_RANGE : 0;
+                            const shiftY = useShift ? (Math.random() * 2 - 1) * SHIFT_RANGE : 0;
+                            
+                            // Отрисовка изображения с учетом всех трансформаций
+                            tempCtx.drawImage(img, -centerX + shiftX, -centerY + shiftY, tempCanvas.width, tempCanvas.height);
+                            tempCtx.restore();
+                            
+                            // Добавление шума
+                            if (useNoise) {
+                                addNoise(tempCtx, tempCanvas.width, tempCanvas.height, NOISE_AMOUNT);
+                            }
+                            
+                            // Применение размытия
+                            if (useBlur) {
+                                applyBlur(tempCtx, tempCanvas.width, tempCanvas.height, BLUR_AMOUNT);
+                            }
+                            
+                            // Изменение контраста
+                            if (useContrast) {
+                                adjustContrast(tempCtx, tempCanvas.width, tempCanvas.height, 
+                                    1 + (Math.random() * 2 - 1) * CONTRAST_RANGE / 100);
+                            }
+                            
+                            // Изменение яркости
+                            if (useBrightness) {
+                                adjustBrightness(tempCtx, tempCanvas.width, tempCanvas.height, 
+                                    (Math.random() * 2 - 1) * BRIGHTNESS_RANGE);
+                            }
+                            
+                            // Сохраняем результат
+                            const augmentedDataURL = tempCanvas.toDataURL('image/png');
+                            augmentedImages.push(augmentedDataURL);
+                        }
+                        
+                        resolve(augmentedImages);
+                    };
+                });
+            }
+
+            // Функция для добавления шума на изображение
+            function addNoise(ctx, width, height, noiseAmount) {
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                const noiseIntensity = noiseAmount / 100; // шум в диапазоне 0-1
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    // Применяем шум только если пиксель не белый (фон)
+                    if (data[i] < 240 || data[i + 1] < 240 || data[i + 2] < 240) {
+                        const noise = (Math.random() * 2 - 1) * noiseIntensity * 50;
+                        data[i] = Math.max(0, Math.min(255, data[i] + noise));
+                        data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise));
+                        data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise));
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+
+            // Функция для применения размытия (исправленная)
+            function applyBlur(ctx, width, height, blurAmount) {
+                // Создаем временный canvas для применения размытия
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                // Копируем изображение на временный canvas
+                tempCtx.drawImage(ctx.canvas, 0, 0);
+                
+                // Применяем простое размытие (боксовый фильтр)
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const pixels = imageData.data;
+                const pixelsCopy = new Uint8ClampedArray(pixels);
+                const blurRadius = Math.floor(blurAmount * 3); // Преобразуем размытие в радиус
+                
+                // Простое боксовое размытие
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        let r = 0, g = 0, b = 0, a = 0, count = 0;
+                        
+                        // Усредняем значения в области радиуса размытия
+                        for (let ky = -blurRadius; ky <= blurRadius; ky++) {
+                            for (let kx = -blurRadius; kx <= blurRadius; kx++) {
+                                const pixelX = Math.min(width - 1, Math.max(0, x + kx));
+                                const pixelY = Math.min(height - 1, Math.max(0, y + ky));
+                                const pixelIndex = (pixelY * width + pixelX) * 4;
+                                
+                                r += pixelsCopy[pixelIndex];
+                                g += pixelsCopy[pixelIndex + 1];
+                                b += pixelsCopy[pixelIndex + 2];
+                                a += pixelsCopy[pixelIndex + 3];
+                                count++;
+                            }
+                        }
+                        
+                        // Вычисляем средние значения и записываем в результат
+                        const pixelIndex = (y * width + x) * 4;
+                        pixels[pixelIndex] = r / count;
+                        pixels[pixelIndex + 1] = g / count;
+                        pixels[pixelIndex + 2] = b / count;
+                        pixels[pixelIndex + 3] = a / count;
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+
+            // Функция для регулировки контраста
+            function adjustContrast(ctx, width, height, contrastFactor) {
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    // Применяем изменение контраста только если пиксель не белый (фон)
+                    if (data[i] < 240 || data[i + 1] < 240 || data[i + 2] < 240) {
+                        // Формула для изменения контраста
+                        for (let j = 0; j < 3; j++) {
+                            const factor = 259 * (contrastFactor + 255) / (255 * (259 - contrastFactor));
+                            data[i + j] = Math.max(0, Math.min(255, factor * (data[i + j] - 128) + 128));
+                        }
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+
+            // Функция для регулировки яркости
+            function adjustBrightness(ctx, width, height, brightnessValue) {
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    // Применяем изменение яркости только если пиксель не белый (фон)
+                    if (data[i] < 240 || data[i + 1] < 240 || data[i + 2] < 240) {
+                        for (let j = 0; j < 3; j++) {
+                            data[i + j] = Math.max(0, Math.min(255, data[i + j] + brightnessValue));
+                        }
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+            
+            // Функция для отображения результатов аугментации
+            function showAugmentationResults(baseImageData, augmentedImages) {
+                previewContainer.innerHTML = '';
+                
+                // Добавляем базовое изображение
+                const baseImg = document.createElement('img');
+                baseImg.src = baseImageData;
+                baseImg.title = 'Оригинал';
+                baseImg.style.border = '2px solid #4285f4';
+                previewContainer.appendChild(baseImg);
+                
+                // Добавляем аугментированные изображения
+                augmentedImages.forEach((dataURL, index) => {
+                    const img = document.createElement('img');
+                    img.src = dataURL;
+                    img.title = `Вариант ${index + 1}`;
+                    previewContainer.appendChild(img);
+                });
+                
+                // Показываем блок с результатами
+                augmentationResult.style.display = 'block';
+            }
+            
+            // Сохранить букву с автоматической аугментацией
+            saveButton.addEventListener('click', async function() {
+                let letter = letterInput.value || letterSelect.value;
+                
+                if (!letter) {
+                    alert('Пожалуйста, выберите или введите букву.');
+                    return;
+                }
+                
+                if (pathHistory.length === 0) {
+                    alert('Пожалуйста, нарисуйте букву перед сохранением.');
+                    return;
+                }
+                
+                if (lowercaseRadio.checked) {
+                    letter = letter.toLowerCase();
+                } else {
+                    letter = letter.toUpperCase();
+                }
+                
+                const baseImageData = canvas.toDataURL('image/png');
+                const id = generateId();
+                
+                // Создаем аугментированные версии автоматически
+                const augmentedImages = await createAugmentedVersions(baseImageData);
+                
+                // Отображаем результаты аугментации
+                showAugmentationResults(baseImageData, augmentedImages);
+                
+                // Сохраняем оригинал в датасет
+                const originalItem = {
+                    id: letter,
+                    letter: letter,
+                    case: lowercaseRadio.checked ? 'lowercase' : 'uppercase',
+                    imageData: baseImageData,
+                    isAugmented: false,
+                    originalId: null,
+                    timestamp: new Date().toISOString()
+                };
+                dataset.push(originalItem);
+                
+                // Сохраняем аугментированные версии
+                augmentedImages.forEach((imageData, index) => {
+                    dataset.push({
+                        id: letter,
+                        letter: letter,
+                        case: lowercaseRadio.checked ? 'lowercase' : 'uppercase',
+                        imageData: imageData,
+                        isAugmented: true,
+                        originalId: id,
+                        timestamp: new Date().toISOString()
+                    });
+                });
+                
+                // Обновляем галерею
+                updateGallery();
+                clearCanvas();
+            });
+            
+            // Обновление отображения галереи
+            function updateGallery() {
+                gallery.innerHTML = '';
+                
+                // Группируем по буквам для более удобного отображения
+                const groupedData = {};
+                
+                dataset.forEach(item => {
+                    // Пропускаем аугментированные изображения в галерее
+                    if (item.isAugmented) return;
+                    
+                    const key = item.letter;
+                    if (!groupedData[key]) {
+                        groupedData[key] = [];
+                    }
+                    groupedData[key].push(item);
+                });
+                
+                // Сортируем буквы для отображения
+                const sortedLetters = Object.keys(groupedData).sort();
+                
+                sortedLetters.forEach(letter => {
+                    const items = groupedData[letter];
+                    
+                    items.forEach(item => {
+                        const letterCard = document.createElement('div');
+                        letterCard.className = 'letter-card';
+                        
+                        const img = document.createElement('img');
+                        img.src = item.imageData;
+                        img.alt = `Буква ${item.letter}`;
+                        
+                        const letterInfo = document.createElement('div');
+                        letterInfo.className = 'letter-info';
+                        
+                        const letterText = document.createElement('p');
+                        letterText.textContent = item.letter;
+                        
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = 'Удалить';
+                        deleteButton.style.fontSize = '12px';
+                        deleteButton.style.padding = '4px 8px';
+                        deleteButton.style.marginTop = '5px';
+                        deleteButton.style.backgroundColor = '#f44336';
+                        
+                        deleteButton.addEventListener('click', function() {
+                            // Удаляем элемент и все его аугментированные версии
+                            dataset = dataset.filter(dataItem => 
+                                dataItem.id !== item.id && dataItem.originalId !== item.id
+                            );
+                            updateGallery();
+                        });
+                        
+                        letterInfo.appendChild(letterText);
+                        letterInfo.appendChild(deleteButton);
+                        
+                        letterCard.appendChild(img);
+                        letterCard.appendChild(letterInfo);
+                        
+                        gallery.appendChild(letterCard);
+                    });
+                });
+            }
+            
+            // Экспорт датасета
+            exportButton.addEventListener('click', function() {
+                if (dataset.length === 0) {
+                    alert('Датасет пуст. Пожалуйста, добавьте хотя бы одну букву.');
+                    return;
+                }
+                
+                // Создаем ZIP-архив
+                const zip = new JSZip();
+                
+                // Организуем структуру директорий
+                dataset.forEach(item => {
+                    const caseFolder = item.case === 'lowercase' ? 'lowercase' : 'uppercase';
+                    const letterFolder = item.letter;
+                    const folderPath = `${caseFolder}/${letterFolder}`;
+                    
+                    // Создаем путь к файлу
+                    let filename;
+                    const randomNumber = Math.floor(Math.random()* 10000000)
+                    if (item.isAugmented) {
+                        filename = `${item.id}_${randomNumber}.${pngFormatRadio.checked ? 'png' : 'jpg'}`;
+                    } else {
+                        filename = `${item.id}_${randomNumber}.${pngFormatRadio.checked ? 'png' : 'jpg'}`;
+}
+                    
+                    // Конвертируем Data URL в Blob
+                    const imageData = item.imageData;
+                    const byteString = atob(imageData.split(',')[1]);
+                    const mimeType = imageData.split(',')[0].split(':')[1].split(';')[0];
+                    
+                    const ab = new ArrayBuffer(byteString.length);
+                    const ia = new Uint8Array(ab);
+                    
+                    for (let i = 0; i < byteString.length; i++) {
+                        ia[i] = byteString.charCodeAt(i);
+                    }
+                    
+                    const blob = new Blob([ab], { type: mimeType });
+                    
+                    // Добавляем файл в архив
+                    zip.folder(folderPath).file(filename, blob);
+                });
+                
+                // Добавляем метаданные в JSON-файл
+                const metadata = {
+                    created: new Date().toISOString(),
+                    format: pngFormatRadio.checked ? 'png' : 'jpg',
+                    totalImages: dataset.length,
+                    originalImages: dataset.filter(item => !item.isAugmented).length,
+                    augmentedImages: dataset.filter(item => item.isAugmented).length,
+                    letters: [...new Set(dataset.map(item => item.letter))].sort()
+                };
+                
+                zip.file('metadata.json', JSON.stringify(metadata, null, 2));
+                
+                // Генерируем и скачиваем архив
+                zip.generateAsync({ type: 'blob' })
+                    .then(function(content) {
+                        // Создаем ссылку для скачивания
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(content);
+                        link.download = 'russian_letters_dataset.zip';
+                        link.click();
+                    });
+            });
+            
+            // Инициализация - загрузка JSZip
+            function loadJSZip() {
+                return new Promise((resolve, reject) => {
+                    // Проверяем, загружен ли JSZip
+                    if (window.JSZip) {
+                        resolve();
+                        return;
+                    }
+                    
+                    // Загружаем JSZip, если он еще не загружен
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+                    script.onload = () => resolve();
+                    script.onerror = () => reject(new Error('Не удалось загрузить JSZip'));
+                    document.head.appendChild(script);
+                });
+            }
+            
+            // Загружаем JSZip при инициализации
+            loadJSZip().catch(error => {
+                console.error('Ошибка загрузки JSZip:', error);
+                alert('Не удалось загрузить необходимые библиотеки. Пожалуйста, проверьте подключение к интернету и обновите страницу.');
+            });
+        });
+    </script>
+</body>
+</html>
